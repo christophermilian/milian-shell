@@ -31,13 +31,6 @@ gcc -o msh main.c
 - [ ] Job control (`Ctrl+Z`, `bg`, `fg`)
 - [ ] Signal handling
 
-/*
-TODOs:
-
-• 0.2.0 — add pwd, prompt improvements
-• 0.3.0 — pipes
-*/
-
 ## Requirements
 
 - GCC or Clang
