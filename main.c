@@ -12,9 +12,9 @@ TODOs:
 #include <string.h>
 #include <limits.h>
 
-#define LSH_RL_BUFSIZE 1024
-#define LSH_TOK_BUFSIZE 64
-#define LSH_TOK_DELIM " \t\r\n\a"
+#define MSH_RL_BUFSIZE 1024
+#define MSH_TOK_BUFSIZE 64
+#define MSH_TOK_DELIM " \t\r\n\a"
 #define MSH_VERSION "0.1.0"
 #define MSH_YEAR "2026"
 
@@ -24,7 +24,7 @@ TODOs:
     X(exit)
 
 // Forward declarations — auto-generated
-#define X(name) int lsh_##name(char **args);
+#define X(name) int msh_##name(char **args);
 BUILTIN_LIST
 #undef X
 
@@ -34,7 +34,7 @@ typedef struct {
     int (*func)(char **);
 } builtin_t;
 
-#define X(name) {#name, lsh_##name},
+#define X(name) {#name, msh_##name},
 builtin_t builtins[] = {
     BUILTIN_LIST
 };
@@ -45,7 +45,7 @@ builtin_t builtins[] = {
  * Uses sizeof trick to count entries in builtin_str array
  * without hardcoding the count.
  */
-int lsh_num_builtins() {
+int msh_num_builtins() {
     return sizeof(builtins) / sizeof(builtin_t);
 }
 
@@ -55,7 +55,7 @@ int lsh_num_builtins() {
  * Prints error if no argument given or if chdir fails (bad path).
  * Returns 1 to keep the shell loop running.
  */
-int lsh_cd(char **args)
+int msh_cd(char **args)
 {
   if (args[1] == NULL) {
     fprintf(stderr, "msh: expected argument to \"cd\"\n");
@@ -72,13 +72,13 @@ int lsh_cd(char **args)
  * Lists all available builtin commands.
  * Returns 1 to keep the shell loop running.
  */
-int lsh_help(char **args)
+int msh_help(char **args)
 {
   int i;
   printf("Christopher Milian's msh v%s, %s\n", MSH_VERSION, MSH_YEAR);
   printf("The following are built in:\n");
 
-  for (i = 0; i < lsh_num_builtins(); i++) {
+  for (i = 0; i < msh_num_builtins(); i++) {
     printf("  %s\n", builtins[i].name);
   }
   return 1;
@@ -86,9 +86,9 @@ int lsh_help(char **args)
 
 /**
  * Builtin: Exit the shell.
- * Returns 0, which signals lsh_loop() to stop.
+ * Returns 0, which signals msh_loop() to stop.
  */
-int lsh_exit(char **args)
+int msh_exit(char **args)
 {
   return 0;
 }
@@ -106,7 +106,7 @@ int lsh_exit(char **args)
  * 
  * Returns 1 to keep the shell loop running.
  */
-int lsh_launch(char **args)
+int msh_launch(char **args)
 {
   pid_t pid, wpid;
   int status;
@@ -137,11 +137,11 @@ int lsh_launch(char **args)
  * Checks if args[0] matches any builtin command name.
  * If found, calls the corresponding builtin function via
  * the function pointer array. Otherwise, falls through
- * to lsh_launch() to run it as an external program.
+ * to msh_launch() to run it as an external program.
  * 
- * Returns 1 to continue, 0 to exit (only from lsh_exit).
+ * Returns 1 to continue, 0 to exit (only from msh_exit).
  */
-int lsh_execute(char **args)
+int msh_execute(char **args)
 {
   int i;
 
@@ -150,13 +150,13 @@ int lsh_execute(char **args)
     return 1;
   }
 
-  for (i = 0; i < lsh_num_builtins(); i++) {
+  for (i = 0; i < msh_num_builtins(); i++) {
     if (strcmp(args[0], builtins[i].name) == 0) {
         return builtins[i].func(args);
     }
   }
 
-  return lsh_launch(args);
+  return msh_launch(args);
 }
 
 /**
@@ -171,9 +171,9 @@ int lsh_execute(char **args)
  * 
  * Caller must free the returned pointer array.
  */
-char **lsh_split_line(char *line)
+char **msh_split_line(char *line)
 {
-  int bufsize = LSH_TOK_BUFSIZE, position = 0;
+  int bufsize = MSH_TOK_BUFSIZE, position = 0;
   char **tokens = malloc(bufsize * sizeof(char*));
   char *token;
 
@@ -182,13 +182,13 @@ char **lsh_split_line(char *line)
     exit(EXIT_FAILURE);
   }
 
-  token = strtok(line, LSH_TOK_DELIM);
+  token = strtok(line, MSH_TOK_DELIM);
   while (token != NULL) {
     tokens[position] = token;
     position++;
 
     if (position >= bufsize) {
-      bufsize += LSH_TOK_BUFSIZE;
+      bufsize += MSH_TOK_BUFSIZE;
       tokens = realloc(tokens, bufsize * sizeof(char*));
       if (!tokens) {
         fprintf(stderr, "msh: allocation error\n");
@@ -196,7 +196,7 @@ char **lsh_split_line(char *line)
       }
     }
 
-    token = strtok(NULL, LSH_TOK_DELIM);
+    token = strtok(NULL, MSH_TOK_DELIM);
   }
   tokens[position] = NULL;
   return tokens;
@@ -214,9 +214,9 @@ char **lsh_split_line(char *line)
  * 
  * Caller must free the returned buffer.
  */
-char *lsh_read_line(void)
+char *msh_read_line(void)
 {
-  int bufsize = LSH_RL_BUFSIZE;
+  int bufsize = MSH_RL_BUFSIZE;
   int position = 0;
   char *buffer = malloc(sizeof(char) * bufsize);
   int c;
@@ -238,7 +238,7 @@ char *lsh_read_line(void)
     position++;
 
     if (position >= bufsize) {
-      bufsize += LSH_RL_BUFSIZE;
+      bufsize += MSH_RL_BUFSIZE;
       buffer = realloc(buffer, bufsize);
       if (!buffer) {
         fprintf(stderr, "msh: allocation error\n");
@@ -253,11 +253,11 @@ char *lsh_read_line(void)
  * 
  * Prints prompt, reads a line, splits it into tokens,
  * executes the command, then frees memory. Repeats
- * until lsh_execute returns 0 (from "exit" command).
+ * until msh_execute returns 0 (from "exit" command).
  * 
  * This is the core loop that makes it a shell.
  */
-void lsh_loop(void)
+void msh_loop(void)
 {
   char *line;
   char **args;
@@ -265,9 +265,9 @@ void lsh_loop(void)
 
   do {
     printf("> ");
-    line = lsh_read_line();
-    args = lsh_split_line(line);
-    status = lsh_execute(args);
+    line = msh_read_line();
+    args = msh_split_line(line);
+    status = msh_execute(args);
 
     free(line);
     free(args);
@@ -282,6 +282,6 @@ void lsh_loop(void)
 int main(int argc, char **argv)
 {
   printf("Christopher Milian's msh v%s, %s\n", MSH_VERSION, MSH_YEAR);
-  lsh_loop();
+  msh_loop();
   return EXIT_SUCCESS;
 }
