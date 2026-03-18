@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# Pure Bash test suite. 
+
 echo "Testing msh..."
 PASS=0
 FAIL=0
