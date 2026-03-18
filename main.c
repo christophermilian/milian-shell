@@ -259,12 +259,25 @@ char *msh_read_line(void)
  */
 void msh_loop(void)
 {
+  /*
+  char     → one character: 'h'
+  char *   → pointer to chars (a string): "hello"
+  char **  → pointer to strings (array of strings): ["ls", "-la", "/home"]
+  */
   char *line;
   char **args;
+  char cwd[PATH_MAX];
   int status;
 
   do {
-    printf("> ");
+    // Get the current working directory and output it on the CLI line
+    if (getcwd(cwd, sizeof(cwd)) != NULL) {
+        char *dir = strrchr(cwd, '/');
+        printf("-> %s > ", dir ? dir + 1 : cwd);
+    } else {
+        printf("-> unknown_path > ");
+    }
+
     line = msh_read_line();
     args = msh_split_line(line);
     status = msh_execute(args);
