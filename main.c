@@ -12,7 +12,7 @@ Made by Christopher Milian, 2026
 #define MSH_RL_BUFSIZE 1024
 #define MSH_TOK_BUFSIZE 64
 #define MSH_TOK_DELIM " \t\r\n\a"
-#define MSH_VERSION "0.1.0"
+#define MSH_VERSION "0.3.0"
 #define MSH_YEAR "2026"
 
 #define BUILTIN_LIST \
