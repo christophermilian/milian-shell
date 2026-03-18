@@ -1,8 +1,5 @@
 /*
-TODOs:
-• 0.1.0 — basic REPL with builtins
-• 0.2.0 — add pwd, prompt improvements
-• 0.3.0 — pipes
+Made by Christopher Milian, 2026
 */
 
 #include <sys/wait.h>
@@ -132,6 +129,56 @@ int msh_launch(char **args)
 }
 
 /**
+ * Execute a piped command (e.g., "ls | grep .c").
+ * 
+ * Creates a pipe connecting two child processes.
+ * Child 1 runs left_args with stdout redirected to the pipe write end.
+ * Child 2 runs right_args with stdin redirected to the pipe read end.
+ * Parent closes both pipe ends and waits for both children to finish.
+ * 
+ * Returns 1 to keep the shell loop running.
+ */
+int msh_execute_pipe(char **left_args, char **right_args) {
+    // pipe logic here
+    int fd[2];
+    pipe(fd);
+
+    // Fork first child (ls)
+    if (fork() == 0) {
+        //duplicate file descriptor
+        dup2(fd[1], STDOUT_FILENO);  // stdout → pipe write end
+        close(fd[0]);                 // don't need read end
+        close(fd[1]);                 // already duped
+        // execvp takes the array directly, which is what left_args has
+        if (execvp(left_args[0], left_args) == -1) {
+          perror("msh");
+        }
+        exit(EXIT_FAILURE);
+    }
+
+    // Fork second child (grep)
+    if (fork() == 0) {
+        //duplicate file descriptor
+        dup2(fd[0], STDIN_FILENO);   // stdin → pipe read end
+        close(fd[1]);                 // don't need write end
+        close(fd[0]);                 // already duped
+        // execvp takes the array directly, which is what right_args has
+        if (execvp(right_args[0], right_args) == -1) {
+          perror("msh");
+        }
+        exit(EXIT_FAILURE);
+    }
+
+    // Parent closes both ends and waits
+    close(fd[0]);
+    close(fd[1]);
+    wait(NULL);
+    wait(NULL);
+
+    return 1;  // keep shell running
+}
+
+/**
  * Execute a command — either builtin or external.
  * 
  * Checks if args[0] matches any builtin command name.
@@ -150,6 +197,26 @@ int msh_execute(char **args)
     return 1;
   }
 
+  // Check for pipe
+  for (i = 0; args[i] != NULL; i++) {
+    if (strcmp(args[i], "|") == 0) {
+      // Found a pipe — split into left and right
+      // ex: [ls, |, grep, doggy]
+      // terminate left side. kill the pipe element itself with NULL
+      // ex: [ls, NULL, grep, doggy]
+      args[i] = NULL;
+
+      // create new pointer that points to start of args array
+      // ex: [ls, NULL, ...]
+      char **left_args = args; 
+
+      // create new pointer that points to second command element of args array
+      // ex: [..., grep, doggy]
+      char **right_args = &args[i + 1];
+      return msh_execute_pipe(left_args, right_args);
+    }
+  }
+
   for (i = 0; i < msh_num_builtins(); i++) {
     if (strcmp(args[0], builtins[i].name) == 0) {
         return builtins[i].func(args);
@@ -161,6 +228,7 @@ int msh_execute(char **args)
 
 /**
  * Split a line into tokens (words) using strtok().
+ * Returns an array of strings.
  * 
  * Allocates a buffer of char* pointers. strtok() splits
  * the input string on whitespace delimiters (space, tab,
@@ -279,6 +347,7 @@ void msh_loop(void)
     }
 
     line = msh_read_line();
+    // splits what user types into an array of args
     args = msh_split_line(line);
     status = msh_execute(args);
 
